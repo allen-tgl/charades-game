@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Voice‑Only Charades</title>
+  <style>
+    /*
+      Basic styles for a responsive single‑page app. The layout
+      shifts from two columns on larger screens to a stacked view on
+      narrow screens. Colour scheme uses high contrast colours so
+      content remains readable on mobile devices outdoors. A system
+      font stack ensures good rendering on all platforms.
+    */
+    :root {
+      --primary: #0a7bdc;
+      --primary-dark: #075fa8;
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --accent: #0b67b3;
+      --success: #065f46;
+    }
+    *,*::before,*::after { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }
+    h1,h2,h3 { margin: 0; }
+    a { color: var(--primary); text-decoration: none; }
+
+    .wrapper {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      max-width: 1000px;
+      padding: 16px;
+      margin: 0 auto;
+    }
+    @media (min-width: 900px) {
+      .wrapper { grid-template-columns: 320px 1fr; }
+    }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 16px;
+    }
+    .title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    label { display:block; font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+    input[type="text"], select {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+    }
+    button {
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-ghost { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+    .btn-ghost:hover { background: rgba(10,123,220,0.1); }
+    .btn-small { padding: 6px 10px; font-size: 0.75rem; }
+
+    .section { margin-bottom: 20px; }
+    .score-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .score-item {
+      background: #f3f4f6;
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .score-label { font-weight: 500; }
+    .score-value { background: var(--text); color: #fff; border-radius: 6px; padding: 0 6px; font-weight: 700; }
+
+    .prompt-card {
+      text-align: center;
+      background: #fbfdff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .prompt-category { font-size: 1.1rem; color: var(--accent); margin-bottom: 8px; }
+    .prompt-phrase { font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th, td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    th { text-align: left; font-weight: 600; }
+    .history-winner { color: var(--success); font-weight: 600; }
+    .rules { background: #f9fafb; border: 1px dashed var(--border); padding: 12px; border-radius: 8px; font-size: 0.8rem; color: var(--muted); margin-bottom: 16px; }
+    .timer-view { height: 20px; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <!-- Setup & scoreboard panel -->
+    <div class="card">
+      <div class="title">Setup</div>
+      <div class="section">
+        <label for="modeSelect">Mode</label>
+        <select id="modeSelect">
+          <option value="individual">Individual</option>
+          <option value="teams">Teams</option>
+        </select>
+      </div>
+      <div class="section" id="individualInputs">
+        <label for="playersInput">Players (comma separated)</label>
+        <div style="display:flex; gap:6px;">
+          <input id="playersInput" type="text" placeholder="Alice, Bob, Carol" />
+          <button class="btn-primary btn-small" id="savePlayers">Save</button>
+        </div>
+      </div>
+      <div class="section" id="teamsInputs" style="display:none;">
+        <label for="teamsInput">Teams (comma separated)</label>
+        <div style="display:flex; gap:6px;">
+          <input id="teamsInput" type="text" placeholder="Team A, Team B" />
+          <button class="btn-primary btn-small" id="saveTeams">Save</button>
+        </div>
+      </div>
+      <div class="section">
+        <label>Timer (seconds)</label>
+        <div style="display:flex; gap:6px;">
+          <input id="timerInput" type="text" placeholder="60" style="width:60px;" />
+          <button class="btn-secondary btn-small" id="setTimer">Set</button>
+          <button class="btn-ghost btn-small" id="stopTimer">Stop</button>
+        </div>
+        <div class="timer-view" id="timerStatus"></div>
+      </div>
+      <div class="section">
+        <div class="title" style="font-size:1rem;">Scoreboard</div>
+        <div id="scoreboard" class="score-list"></div>
+      </div>
+    </div>
+
+    <!-- Main game panel -->
+    <div>
+      <div class="card">
+        <div class="title">Voice‑Only Charades</div>
+        <div class="rules">
+          Hands behind your back. Use voice only (sounds, humming, rhythm). Do not speak, spell or hint the word. In team mode, the actor comes from the same team. 1 point per correct guess.
+        </div>
+        <div class="prompt-card">
+          <div id="promptTimer" class="timer-view"></div>
+          <div id="promptCategory" class="prompt-category">Category</div>
+          <div id="promptPhrase" class="prompt-phrase">Press Next to start</div>
+          <div style="display:flex; gap:8px; justify-content:center;">
+            <button class="btn-primary" id="nextBtn">Next</button>
+            <button class="btn-secondary" id="skipBtn">Skip</button>
+          </div>
+        </div>
+        <div class="section">
+          <label for="winnerSelect">Award point to</label>
+          <div style="display:flex; gap:6px;">
+            <select id="winnerSelect"></select>
+            <button class="btn-primary btn-small" id="awardBtn">Award</button>
+            <button class="btn-secondary btn-small" id="undoBtn">Undo</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="title">History</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:0.8rem; color: var(--muted);">
+          <div>Past prompts and winners</div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-ghost btn-small" id="exportBtn">Export CSV</button>
+            <button class="btn-secondary btn-small" id="clearHistoryBtn">Clear</button>
+          </div>
+        </div>
+        <div style="max-height:250px; overflow-y:auto;">
+          <table>
+            <thead>
+              <tr><th style="width:100px;">Time</th><th style="width:120px;">Category</th><th>Phrase</th><th style="width:140px;">Winner</th></tr>
+            </thead>
+            <tbody id="historyTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  /*
+    Category data. For demonstration we include a few entries. To
+    support a larger word bank (e.g. 5000 words), you can split
+    categories into separate JSON files (e.g. data/actions.json) and
+    fetch them asynchronously; the loader would populate the
+    categories object below.
+  */
+  const categories = {
+    Action: ['Run','Dance','Swim','Jump','Cook','Draw','Sing','Drive','Climb','Lift'],
+    Incident: ['Fire Drill','Lost Keys','Power Outage','Flat Tire','Rain Delay','Birthday Party','Traffic Jam','Car Crash'],
+    People: ['Teacher','Pilot','Doctor','Chef','Dancer','Singer','Nurse','Athlete','Engineer','Driver'],
+    Places: ['Beach','Hospital','Airport','Park','Library','Stadium','School','Museum','Restaurant','Mountain'],
+    Personas: ['Superhero','Detective','Pirate','Wizard','Astronaut','Ninja','Robot','Clown','Teacher','Doctor'],
+    Nature: ['Volcano','Rainbow','Thunder','Waterfall','Blizzard','Tornado','Earthquake','Hurricane','Snow','Sunset'],
+    Object: ['Laptop','Guitar','Camera','Hammer','Toothbrush','Backpack','Bicycle','Phone','Book','Cup']
+  };
+
+  // Application state persisted in localStorage
+  const state = {
+    mode: 'individual',
+    players: [],
+    teams: [],
+    scores: {},
+    history: [],
+    lastAction: null,
+    timerSec: null,
+    timerLeft: 0,
+    timerId: null
+  };
+  const STORAGE_KEY = 'voc_state_v2';
+
+  // Helpers to select elements
+  const $ = (sel) => document.querySelector(sel);
+
+  function loadState() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    try {
+      const obj = JSON.parse(raw);
+      Object.assign(state, obj);
+    } catch(err) {
+      console.warn('Failed to parse saved state', err);
+    }
+  }
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    render();
+  }
+
+  function init() {
+    loadState();
+    // set up event listeners
+    $('#modeSelect').value = state.mode;
+    $('#modeSelect').addEventListener('change', () => {
+      state.mode = $('#modeSelect').value;
+      saveState();
+    });
+    $('#savePlayers').addEventListener('click', () => {
+      const list = $('#playersInput').value.split(',').map(x => x.trim()).filter(Boolean);
+      state.players = list;
+      state.scores = ensureScores(list, state.scores);
+      saveState();
+    });
+    $('#saveTeams').addEventListener('click', () => {
+      const list = $('#teamsInput').value.split(',').map(x => x.trim()).filter(Boolean);
+      state.teams = list;
+      state.scores = ensureScores(list, state.scores);
+      saveState();
+    });
+    $('#setTimer').addEventListener('click', () => {
+      const n = parseInt($('#timerInput').value, 10);
+      if(Number.isFinite(n) && n > 0) {
+        state.timerSec = n;
+        saveState();
+        startTimer();
+      }
+    });
+    $('#stopTimer').addEventListener('click', stopTimer);
+    $('#nextBtn').addEventListener('click', () => { showNextPrompt(); startTimer(); });
+    $('#skipBtn').addEventListener('click', showNextPrompt);
+    $('#awardBtn').addEventListener('click', awardPoint);
+    $('#undoBtn').addEventListener('click', undoLast);
+    $('#clearHistoryBtn').addEventListener('click', () => { state.history = []; saveState(); });
+    $('#exportBtn').addEventListener('click', exportCsv);
+    render();
+  }
+
+  function ensureScores(list, prev) {
+    const out = {};
+    list.forEach(name => { out[name] = (prev && prev[name]) || 0; });
+    return out;
+  }
+  function render() {
+    // toggle inputs
+    if(state.mode === 'individual') {
+      $('#individualInputs').style.display = '';
+      $('#teamsInputs').style.display = 'none';
+    } else {
+      $('#individualInputs').style.display = 'none';
+      $('#teamsInputs').style.display = '';
+    }
+    // scoreboard
+    const names = state.mode === 'individual' ? state.players : state.teams;
+    state.scores = ensureScores(names, state.scores);
+    $('#scoreboard').innerHTML = names.map(name => {
+      const sc = state.scores[name] || 0;
+      return `<div class="score-item"><span class="score-label">${escapeHtml(name)}</span><span class="score-value">${sc}</span><button class="btn-secondary btn-small" onclick="quickAward('${escapeHtml(name)}')">+1</button></div>`;
+    }).join('');
+    // winner select
+    $('#winnerSelect').innerHTML = names.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+    // timer status
+    if(state.timerSec) {
+      $('#timerStatus').textContent = `${state.timerSec}s`;
+    } else {
+      $('#timerStatus').textContent = 'off';
+    }
+    // history table
+    const rows = state.history.slice().reverse().map(item => {
+      return `<tr><td>${formatTime(item.ts)}</td><td>${escapeHtml(item.category)}</td><td>${escapeHtml(item.phrase)}</td><td class="history-winner">${escapeHtml(item.winner)}</td></tr>`;
+    }).join('');
+    $('#historyTable').innerHTML = rows;
+    // update winner select default if names changed
+    if(names.length > 0 && !names.includes($('#winnerSelect').value)) {
+      $('#winnerSelect').value = names[0];
+    }
+  }
+
+  function showNextPrompt() {
+    const catList = Object.keys(categories);
+    const cat = catList[Math.floor(Math.random() * catList.length)];
+    const words = categories[cat];
+    const phrase = words[Math.floor(Math.random() * words.length)];
+    $('#promptCategory').textContent = cat;
+    $('#promptPhrase').textContent = phrase;
+  }
+  function awardPoint() {
+    const winner = $('#winnerSelect').value;
+    if(!winner) return;
+    // update score and history
+    state.scores[winner] = (state.scores[winner] || 0) + 1;
+    const entry = {
+      ts: Date.now(),
+      category: $('#promptCategory').textContent,
+      phrase: $('#promptPhrase').textContent,
+      winner
+    };
+    state.history.push(entry);
+    state.lastAction = {type:'award', winner, delta:1};
+    saveState();
+    showNextPrompt();
+  }
+  function quickAward(name) {
+    $('#winnerSelect').value = name;
+    awardPoint();
+  }
+  function undoLast() {
+    const act = state.lastAction;
+    if(act && act.type === 'award') {
+      const w = act.winner;
+      if(state.scores[w] > 0) state.scores[w] -= act.delta;
+      // remove last history entry if matches winner
+      if(state.history.length > 0) state.history.pop();
+      state.lastAction = null;
+      saveState();
+    }
+  }
+  function startTimer() {
+    if(!state.timerSec) return;
+    stopTimer();
+    state.timerLeft = state.timerSec;
+    $('#promptTimer').textContent = `Time left: ${state.timerLeft}s`;
+    state.timerId = setInterval(() => {
+      if(state.timerLeft <= 1) {
+        stopTimer();
+        $('#promptTimer').textContent = 'Time up';
+        return;
+      }
+      state.timerLeft -= 1;
+      $('#promptTimer').textContent = `Time left: ${state.timerLeft}s`;
+    }, 1000);
+  }
+  function stopTimer() {
+    if(state.timerId) {
+      clearInterval(state.timerId);
+      state.timerId = null;
+    }
+    state.timerLeft = 0;
+    $('#promptTimer').textContent = '';
+  }
+  function exportCsv() {
+    if(state.history.length === 0) return;
+    const header = ['Time','Category','Phrase','Winner'];
+    const lines = [header.join(',')];
+    state.history.forEach(item => {
+      lines.push([formatTime(item.ts), item.category, item.phrase, item.winner].map(csvEscape).join(','));
+    });
+    const csvStr = lines.join('\n');
+    const blob = new Blob([csvStr], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'charades_history.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  function csvEscape(str) {
+    const s = String(str);
+    if(/[,\"\n]/.test(s)) {
+      return '"' + s.replace(/\"/g, '""') + '"';
+    }
+    return s;
+  }
+  function formatTime(ts) {
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  }
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+  // Initialize on load
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
