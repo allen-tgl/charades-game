@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice-Only Charades</title>
+  <style>
+    :root {
+      --primary: #0a7bdc;
+      --primary-hover: #075fa8;
+      --accent: #0b67b3;
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --success: #065f46;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+    @media (min-width: 900px) {
+      .grid.two {
+        grid-template-columns: 330px 1fr;
+      }
+    }
+    .card {
+      background-color: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      padding: 14px;
+    }
+    .title {
+      font-weight: 600;
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    label {
+      font-size: 13px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+    input[type="text"], select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      font-size: 14px;
+    }
+    textarea {
+      resize: vertical;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn {
+      background-color: var(--primary);
+      color: #ffffff;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn.secondary {
+      background-color: var(--border);
+      color: var(--text);
+    }
+    .btn.ghost {
+      background-color: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+    .btn.small {
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .pill {
+      background-color: #eef6ff;
+      color: #075985;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+    .section {
+      margin-top: 12px;
+    }
+    .scorelist {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .scoreitem {
+      background-color: #f3f4f6;
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .score {
+      background-color: var(--text);
+      color: #ffffff;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-weight: 700;
+    }
+    .bigcard {
+      text-align: center;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background-color: #fbfdff;
+    }
+    .bigcat {
+      margin: 4px 0 8px;
+      font-size: 18px;
+      color: var(--accent);
+    }
+    .bigphrase {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 6px 0 10px;
+    }
+    .rules {
+      font-size: 13px;
+      color: #374151;
+      background-color: #f9fafb;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px;
+      font-size: 13px;
+      text-align: left;
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .winner {
+      color: var(--success);
+      font-weight: 600;
+    }
+    .right {
+      text-align: right;
+    }
+    @media (max-width: 899px) {
+      .grid.two {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap grid two">
+    <div class="card">
+      <h2 class="title">Setup</h2>
+      <div class="section">
+        <label for="mode">Mode</label>
+        <div class="row">
+          <select id="mode">
+            <option value="individual">Individual</option>
+            <option value="teams">Teams</option>
+          </select>
+          <button class="btn small" id="clearAll">Reset all</button>
+        </div>
+      </div>
+      <div class="section" id="individualBox">
+        <label>Players (comma separated)</label>
+        <div class="row">
+          <input id="playersInput" type="text" placeholder="Alice, Bob, Carol" />
+          <button class="btn small" id="savePlayers">Save players</button>
+        </div>
+      </div>
+      <div class="section" id="teamsBox" style="display:none">
+        <label>Teams (comma separated)</label>
+        <div class="row">
+          <input id="teamsInput" type="text" placeholder="Team A, Team B" />
+          <button class="btn small" id="saveTeams">Save teams</button>
+        </div>
+      </div>
+      <div class="section">
+        <label class="row" style="justify-content:space-between">
+          <span>Timer seconds (optional)</span>
+          <span class="pill" id="timerState">off</span>
+        </label>
+        <div class="row">
+          <input id="timerSeconds" type="text" placeholder="60" />
+          <button class="btn small secondary" id="setTimer">Set</button>
+          <button class="btn small ghost" id="stopTimer" disabled>Stop</button>
+        </div>
+      </div>
+      <div class="section">
+        <h3 class="title" style="font-size:16px">Scoreboard</h3>
+        <div id="scoreboard" class="scorelist"></div>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns: 1fr">
+      <div class="card">
+        <h2 class="title">Voice-Only Charades</h2>
+        <div class="rules">
+          Hands behind your back. Use voice only (sounds, humming, rhythm). Do not say the word, spell it, or give direct hints. Actor comes from the same team in team mode. 1 point per correct guess.
+        </div>
+        <div class="section bigcard">
+          <div id="timerView" class="muted" style="height:18px"></div>
+          <div class="bigcat" id="category">Category</div>
+          <div class="bigphrase" id="phrase">Tap Next to start</div>
+          <div class="row" style="justify-content:center; margin-top:8px">
+            <button class="btn" id="next">Next</button>
+            <button class="btn secondary" id="skip">Skip</button>
+          </div>
+        </div>
+        <div class="section">
+          <label for="winnerSelect">Award point to</label>
+          <div class="row">
+            <select id="winnerSelect"></select>
+            <button class="btn" id="award">Award 1 point</button>
+            <button class="btn secondary" id="undo" disabled>Undo last</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="title">History</h2>
+        <div class="row" style="justify-content:space-between">
+          <div class="muted">Past prompts and winners</div>
+          <div class="row">
+            <button class="btn small ghost" id="exportCsv">Export CSV</button>
+            <button class="btn small secondary" id="clearHistory">Clear</button>
+          </div>
+        </div>
+        <div class="section" style="max-height:280px; overflow:auto">
+          <table>
+            <thead>
+              <tr><th style="width:120px">Time</th><th style="width:140px">Category</th><th>Phrase</th><th style="width:180px">Winner</th></tr>
+            </thead>
+            <tbody id="history"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const baseWords = {
+      Action: ['Run','Jump','Swim','Dance','Cook','Sing','Laugh','Write','Read','Drive','Sleep','Eat','Drink','Climb','Paint','Listen','Draw','Sneeze','Cough','Walk','Kick','Punch','Throw','Catch','Hug','Kiss','Wave','Bow','Skip','Spin','Roll','Lift','Push','Pull','Yawn','Stretch','Lean','Bend','Kneel','Fall','Fly','Row','Swing','Slide','Tackle','Chew','Dig','Shout'],
+      Incident: ['Fire Drill','Car Crash','Flood','Tornado','Storm','Earthquake','Power Outage','Lost Keys','Broken Glass','Flat Tire','Traffic Jam','Rain Delay','Snow Day','Robbery','Picnic','Wedding','Graduation','Birthday','Funeral','Protest','Election','Parade','Blackout','Accident','Traffic Stop','Rainstorm','Heatwave','Tsunami','Volcano','Wildfire','Avalanche','Landslide','Blizzard','Hailstorm','Drought','Festival','Conference','Meeting','Holiday','Strike','Game','Concert','Explosion','Riot','Marathon','Competition'],
+      People: ['Teacher','Doctor','Chef','Baker','Singer','Dancer','Pirate','Wizard','Pilot','Astronaut','Farmer','Nurse','Firefighter','Lawyer','Judge','Engineer','Architect','Barber','Plumber','Mechanic','Detective','Policeman','Soldier','Athlete','Coach','Driver','Gardener','Tailor','Photographer','Artist','Actor','Waiter','Waitress','Fisherman','Secretary','Scientist','Musician','Student','Librarian','Counselor','Veterinarian','Programmer','Carpenter','Banker','Electrician','Reporter','Writer','Reporter'],
+      Places: ['Beach','Hospital','Airport','Park','Library','Stadium','Restaurant','Museum','Zoo','Office','School','University','Mall','Farm','Bank','Factory','Playground','Theater','Church','Mosque','Temple','Hotel','Bakery','Pharmacy','Garden','Bridge','Tunnel','Subway','Station','Highway','Island','Mountain','Forest','Desert','Oasis','Lake','River','Sea','Ocean','Valley','Jungle','City','Town','Village','Castle','Palace','Fortress','Camp','Cabin'],
+      Personas: ['Superhero','Detective','Pirate','Wizard','Ninja','Cowboy','Doctor','Teacher','Chef','Fairy','Robot','Ghost','Vampire','Werewolf','Knight','Princess','Prince','Queen','King','Soldier','Spy','Athlete','Musician','Artist','Scientist','Magician','Alien','Astronaut','Firefighter','Policeman','Dancer','Clown','Joker','Engineer','Librarian','Nurse','Cook','Pilot','Farmer','Actor','Writer','Blogger','Gamer','Designer','Photographer','Inventor','Explorer','Cyclist','Driver'],
+      Nature: ['Volcano','Rainbow','Tornado','Avalanche','Blizzard','Thunder','Lightning','Tsunami','Earthquake','Hurricane','Waterfall','Stream','River','Lake','Ocean','Sea','Forest','Jungle','Desert','Oasis','Grassland','Meadow','Field','Valley','Mountain','Hill','Cliff','Plain','Island','Beach','Reef','Cave','Glacier','Canyon','Dune','Prairie','Swamp','Pond','Geyser','Creek','Storm','Rain','Wind','Snow','Cloud','Fog','Mist','Sunlight','Moonlight'],
+      Object: ['Laptop','Guitar','Hammer','Toaster','Camera','Phone','Table','Chair','Pillow','Backpack','Pencil','Pen','Paper','Book','Television','Radio','Clock','Lamp','Cup','Bottle','Spoon','Fork','Knife','Plate','Bowl','Basket','Blanket','Mirror','Brush','Comb','Candle','Key','Wallet','Purse','Shoes','Socks','Hat','Coat','Shirt','Pants','Dress','Scarf','Watch','Necklace','Ring','Belt','Globe','Toy','Ball','Frisbee']
+    };
+    const categories = {};
+    Object.keys(baseWords).forEach(cat => {
+      categories[cat] = [];
+      for (let i = 0; i < 15; i++) {
+        categories[cat] = categories[cat].concat(baseWords[cat]);
+      }
+    });
+    const S = {
+      mode: 'individual',
+      players: [],
+      teams: [],
+      scores: {},
+      history: [],
+      lastAction: null,
+      timerSec: null,
+      timerLeft: 0,
+      timerId: null,
+      category: null,
+      phrase: null
+    };
+    const els = {
+      mode: document.getElementById('mode'),
+      individualBox: document.getElementById('individualBox'),
+      teamsBox: document.getElementById('teamsBox'),
+      playersInput: document.getElementById('playersInput'),
+      teamsInput: document.getElementById('teamsInput'),
+      savePlayers: document.getElementById('savePlayers'),
+      saveTeams: document.getElementById('saveTeams'),
+      scoreboard: document.getElementById('scoreboard'),
+      category: document.getElementById('category'),
+      phrase: document.getElementById('phrase'),
+      next: document.getElementById('next'),
+      skip: document.getElementById('skip'),
+      winnerSelect: document.getElementById('winnerSelect'),
+      award: document.getElementById('award'),
+      undo: document.getElementById('undo'),
+      history: document.getElementById('history'),
+      clearAll: document.getElementById('clearAll'),
+      exportCsv: document.getElementById('exportCsv'),
+      clearHistory: document.getElementById('clearHistory'),
+      timerSeconds: document.getElementById('timerSeconds'),
+      setTimer: document.getElementById('setTimer'),
+      stopTimer: document.getElementById('stopTimer'),
+      timerState: document.getElementById('timerState'),
+      timerView: document.getElementById('timerView')
+    };
+    function esc(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function enc(str) {
+      return String(str).replace(/'/g, "\\'");
+    }
+    function fmtTime(ts) {
+      const d = new Date(ts);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+    function cleanList(v) {
+      return v.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    function saveState() {
+      localStorage.setItem('voc_state', JSON.stringify(S));
+      render();
+    }
+    function loadState() {
+      const raw = localStorage.getItem('voc_state');
+      if (!raw) return;
+      try {
+        const data = JSON.parse(raw);
+        Object.assign(S, data);
+      } catch (e) {
+        console.warn('Failed to parse state', e);
+      }
+    }
+    function render() {
+      els.individualBox.style.display = S.mode === 'individual' ? '' : 'none';
+      els.teamsBox.style.display = S.mode === 'teams' ? '' : 'none';
+      const names = S.mode === 'individual' ? S.players : S.teams;
+      const newScores = {};
+      names.forEach(n => {
+        newScores[n] = Number.isFinite(S.scores[n]) ? S.scores[n] : 0;
+      });
+      S.scores = newScores;
+      els.winnerSelect.innerHTML = names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      els.scoreboard.innerHTML = names.map(n => {
+        const sc = S.scores[n] || 0;
+        return `<div class="scoreitem"><span>${esc(n)}</span><span class="score">${sc}</span><button class="btn small secondary" onclick="quickAward('${enc(n)}')">+1</button></div>`;
+      }).join('');
+      els.history.innerHTML = S.history.slice().reverse().map(row => {
+        return `<tr><td class="muted">${fmtTime(row.ts)}</td><td>${esc(row.category)}</td><td>${esc(row.phrase)}</td><td class="winner">${esc(row.winner)}</td></tr>`;
+      }).join('');
+      els.undo.disabled = !S.lastAction;
+    }
+    function nextPrompt() {
+      if (S.timerSec) {
+        startTimer();
+      }
+      const catList = Object.keys(categories);
+      const cat = catList[Math.floor(Math.random() * catList.length)];
+      const list = categories[cat];
+      const phrase = list[Math.floor(Math.random() * list.length)];
+      S.category = cat;
+      S.phrase = phrase;
+      els.category.textContent = cat;
+      els.phrase.textContent = phrase;
+    }
+    function awardPoint() {
+      const name = els.winnerSelect.value;
+      if (!name) return;
+      S.scores[name] = (S.scores[name] || 0) + 1;
+      const rec = { ts: Date.now(), category: S.category || '', phrase: S.phrase || '', winner: name };
+      S.history.push(rec);
+      S.lastAction = { type: 'award', winner: name, delta: 1 };
+      saveState();
+    }
+    function quickAward(name) {
+      S.scores[name] = (S.scores[name] || 0) + 1;
+      const rec = { ts: Date.now(), category: S.category || '', phrase: S.phrase || '', winner: name };
+      S.history.push(rec);
+      S.lastAction = { type: 'award', winner: name, delta: 1 };
+      saveState();
+    }
+    window.quickAward = quickAward;
+    function undoLast() {
+      if (!S.lastAction) return;
+      const { winner, delta } = S.lastAction;
+      S.scores[winner] = Math.max(0, (S.scores[winner] || 0) - delta);
+      for (let i = S.history.length - 1; i >= 0; i--) {
+        if (S.history[i].winner === winner) {
+          S.history.splice(i, 1);
+          break;
+        }
+      }
+      S.lastAction = null;
+      saveState();
+    }
+    function resetAll() {
+      if (!confirm('Reset scores, history and timer?')) return;
+      S.scores = {};
+      S.history = [];
+      S.lastAction = null;
+      S.timerSec = null;
+      stopTimer();
+      S.category = null;
+      S.phrase = null;
+      els.category.textContent = 'Category';
+      els.phrase.textContent = 'Tap Next to start';
+      saveState();
+    }
+    function exportCsv() {
+      let csv = 'Time,Category,Phrase,Winner\n';
+      S.history.forEach(row => {
+        csv += `${new Date(row.ts).toISOString()},"${row.category.replace(/"/g, '""')}","${row.phrase.replace(/"/g, '""')}","${row.winner.replace(/"/g, '""')}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'charades_history.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    function setTimerSeconds() {
+      const val = parseInt(els.timerSeconds.value, 10);
+      if (!isNaN(val) && val > 0) {
+        S.timerSec = val;
+        saveState();
+        startTimer();
+      }
+    }
+    function startTimer() {
+      stopTimer();
+      if (!S.timerSec) return;
+      S.timerLeft = S.timerSec;
+      els.stopTimer.disabled = false;
+      els.timerState.textContent = `${S.timerSec}s`;
+      tick();
+      S.timerId = setInterval(tick, 1000);
+    }
+    function stopTimer() {
+      if (S.timerId) {
+        clearInterval(S.timerId);
+        S.timerId = null;
+      }
+      S.timerLeft = 0;
+      els.timerView.textContent = '';
+      els.stopTimer.disabled = true;
+      els.timerState.textContent = 'off';
+    }
+    function tick() {
+      if (S.timerLeft <= 0) {
+        els.timerView.textContent = 'Time up';
+        stopTimer();
+        return;
+      }
+      els.timerView.textContent = `Time left ${S.timerLeft}s`;
+      S.timerLeft -= 1;
+    }
+    function init() {
+      loadState();
+      render();
+      els.mode.value = S.mode;
+      els.mode.addEventListener('change', () => {
+        S.mode = els.mode.value;
+        saveState();
+      });
+      els.savePlayers.addEventListener('click', () => {
+        const list = cleanList(els.playersInput.value);
+        if (list.length) {
+          S.players = list;
+          saveState();
+        }
+      });
+      els.saveTeams.addEventListener('click', () => {
+        const list = cleanList(els.teamsInput.value);
+        if (list.length) {
+          S.teams = list;
+          saveState();
+        }
+      });
+      els.next.addEventListener('click', nextPrompt);
+      els.skip.addEventListener('click', nextPrompt);
+      els.award.addEventListener('click', awardPoint);
+      els.undo.addEventListener('click', undoLast);
+      els.clearAll.addEventListener('click', resetAll);
+      els.exportCsv.addEventListener('click', exportCsv);
+      els.clearHistory.addEventListener('click', () => { S.history = []; saveState(); });
+      els.setTimer.addEventListener('click', setTimerSeconds);
+      els.stopTimer.addEventListener('click', stopTimer);
+    }
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
